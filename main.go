@@ -4,6 +4,7 @@ import (
 	"os"
 
 	ui "github.com/gizak/termui"
+	"github.com/mmcdole/gofeed"
 )
 
 // func findPercentage(percentage int, total int) int {
@@ -38,13 +39,9 @@ func main() {
 		"Press 'a' to Add a RSS Feed",
 	}
 
-	rssNamesItems := []string{
-		"wish there was content here",
-	}
+	rssNamesItems := []string{}
 
-	rssContentItems := []string{
-		"this is where the titles of the headers would go",
-	}
+	rssContentItems := []string{}
 
 	addRssHeader := ui.NewList()
 	addRssHeader.Items = rssHeader
@@ -89,13 +86,16 @@ func main() {
 		for {
 
 			b := make([]byte, 3, 3)
+			// read from the standard input and do some processing
 			input, _ := os.Stdin.Read(b)
 
+			// TODO : check if whatever is entered is a valid url
 			if input == 1 {
 				// if its an escape - break out of the loop
 				if b[0] == 27 {
 					break inputloop
 				} else if b[0] == 8 && len(inputString) > 0 ||
+					// back spaces
 					b[0] == 127 && len(inputString) > 0 {
 					// remove the last character of the string
 					inputString = inputString[:len(inputString)-1]
@@ -121,7 +121,10 @@ func main() {
 					rssNamesItems = append(rssNamesItems, inputString)
 					rssNames.Items = rssNamesItems
 
+					// reset the string so the previous
+					// input is wiped
 					inputString = ""
+
 					break inputloop
 				} else {
 					// convert b[0] to a letter
@@ -148,6 +151,21 @@ func main() {
 		}
 
 		ui.Clear()
+		ui.Render(addRssHeader, rssNames, rssContent)
+	})
+
+	ui.Handle("r", func(ui.Event) {
+		// find the input
+		rssInputFeed := rssNamesItems[len(rssNamesItems)-1]
+
+		fp := gofeed.NewParser()
+		feed, _ := fp.ParseURL(rssInputFeed)
+		// fmt.Println(feed.Title)
+		// feed the title to the content stack
+		// TODO : have another stack that serves this while storing
+		// the full json
+		rssContentItems = append(rssContentItems, feed.Title)
+		rssContent.Items = rssContentItems
 		ui.Render(addRssHeader, rssNames, rssContent)
 	})
 
