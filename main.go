@@ -13,7 +13,7 @@ import (
 // -start making functions
 
 var (
-	rssNamesCounter = 0
+	rssNamesCounter = -1
 )
 
 func main() {
@@ -174,6 +174,9 @@ func main() {
 	})
 
 	ui.Handle("j", func(ui.Event) {
+		// add one when going down
+		rssNamesCounter++
+
 		// get all the strings from the rssNames array
 		// rssNamesCounter will be the 'height'
 
@@ -190,15 +193,27 @@ func main() {
 		// re-render the background
 		ui.Render(addRssHeader, rssNames, rssContent)
 
-		// add one when going down
-		rssNamesCounter++
 	})
 
 	ui.Handle("k", func(ui.Event) {
-		fmt.Println("hello this is k")
-
-		// minus one when going up
+		// minus one when going down
 		rssNamesCounter--
+		// get all the strings from the rssNames array
+		// rssNamesCounter will be the 'height'
+
+		// rssNamesItemsClone := rssNamesItems
+		rssNamesItemsClone := []string{}
+		rssNamesItemsClone = append(rssNamesItemsClone, rssNamesItems...)
+
+		rssNamesItemsClone[rssNamesCounter] = "[" +
+			rssNamesItemsClone[rssNamesCounter] +
+			"]" + "(fg-red,bg-green)"
+
+		// reset the Items with the new highlighting
+		rssNames.Items = rssNamesItemsClone
+		// re-render the background
+		ui.Render(addRssHeader, rssNames, rssContent)
+
 	})
 
 	ui.Handle("tab", func(ui.Event) {
