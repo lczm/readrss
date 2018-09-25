@@ -3,14 +3,13 @@ package main
 import (
 	"fmt"
 	"os"
-	// "strings"
 
 	ui "github.com/gizak/termui"
 	"github.com/mmcdole/gofeed"
 )
 
 // TODO
-// -start making functions
+// -start making functions ._.
 
 var (
 	rssNamesCounter = -1
@@ -30,8 +29,6 @@ func main() {
 
 	halfWidth := termWidth / 2
 
-	// leftWidth := utf8.RuneCountInString("Press 'a' to Add a RSS Feed")
-
 	leftWidth := halfWidth
 	rightWidth := termWidth - halfWidth
 
@@ -40,7 +37,7 @@ func main() {
 	rssContentHeight := termHeight
 
 	rssHeader := []string{
-		"Press 'a' to Add a RSS Feed",
+		"Press 'a/A' to Add a RSS Feed",
 	}
 
 	rssNamesItems := []string{}
@@ -181,7 +178,6 @@ func main() {
 			rssNamesCounter++
 		}
 
-		// get all the strings from the rssNames array
 		// rssNamesCounter will be the 'height'
 
 		// rssNamesItemsClone := rssNamesItems
@@ -207,7 +203,6 @@ func main() {
 			rssNamesCounter--
 		}
 
-		// get all the strings from the rssNames array
 		// rssNamesCounter will be the 'height'
 
 		// rssNamesItemsClone := rssNamesItems
@@ -230,5 +225,4 @@ func main() {
 	})
 
 	ui.Loop()
-
 }
