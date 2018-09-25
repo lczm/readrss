@@ -15,6 +15,12 @@ var (
 	rssNamesCounter = -1
 )
 
+func getCurrentFocus(stack []string, position int) string {
+
+	focusString := stack[position]
+	return focusString
+}
+
 func main() {
 	err := ui.Init()
 	if err != nil {
@@ -155,16 +161,24 @@ func main() {
 		ui.Render(addRssHeader, rssNames, rssContent)
 	})
 
-	ui.Handle("r", func(ui.Event) {
-		// find the input
-		rssInputFeed := rssNamesItems[len(rssNamesItems)-1]
+	ui.Handle("<Enter>", func(ui.Event) {
+
+		// make sure the counter isnt the default(-1)
+		if rssNamesCounter < 0 {
+			rssNamesCounter = 0
+		}
+		// the current 'input' that is being focused
+		focusString := getCurrentFocus(rssNamesItems, rssNamesCounter)
 
 		fp := gofeed.NewParser()
-		feed, _ := fp.ParseURL(rssInputFeed)
+		feed, _ := fp.ParseURL(focusString)
+
 		// fmt.Println(feed.Title)
 		// feed the title to the content stack
+
 		// TODO : have another stack that serves this while storing
 		// the full json
+
 		rssContentItems = append(rssContentItems, feed.Title)
 		rssContent.Items = rssContentItems
 		ui.Render(addRssHeader, rssNames, rssContent)
@@ -220,7 +234,8 @@ func main() {
 
 	})
 
-	ui.Handle("tab", func(ui.Event) {
+	ui.Handle("<Tab>", func(ui.Event) {
+		// TODO : switch focus
 		fmt.Println("hello this is tab")
 	})
 
