@@ -1,16 +1,20 @@
 package main
 
 import (
+	"fmt"
 	"os"
+	// "strings"
 
 	ui "github.com/gizak/termui"
 	"github.com/mmcdole/gofeed"
 )
 
-// func findPercentage(percentage int, total int) int {
+// TODO
+// -start making functions
 
-// 	return calculated_percentage
-// }
+var (
+	rssNamesCounter = 0
+)
 
 func main() {
 	err := ui.Init()
@@ -85,18 +89,18 @@ func main() {
 	inputloop:
 		for {
 
-			b := make([]byte, 3, 3)
+			character := make([]byte, 1, 1)
 			// read from the standard input and do some processing
-			input, _ := os.Stdin.Read(b)
+			input, _ := os.Stdin.Read(character)
 
 			// TODO : check if whatever is entered is a valid url
 			if input == 1 {
 				// if its an escape - break out of the loop
-				if b[0] == 27 {
+				if character[0] == 27 {
 					break inputloop
-				} else if b[0] == 8 && len(inputString) > 0 ||
+				} else if character[0] == 8 && len(inputString) > 0 ||
 					// back spaces
-					b[0] == 127 && len(inputString) > 0 {
+					character[0] == 127 && len(inputString) > 0 {
 					// remove the last character of the string
 					inputString = inputString[:len(inputString)-1]
 
@@ -112,7 +116,7 @@ func main() {
 					ui.Render(addRssHeader, rssNames, rssContent)
 					// render the new textbox
 					ui.Render(inputParagraph)
-				} else if b[0] == 13 {
+				} else if character[0] == 13 {
 					// if its an enter - save & submit
 					if len(inputString) < 1 {
 						ui.Clear()
@@ -128,7 +132,7 @@ func main() {
 					break inputloop
 				} else {
 					// convert b[0] to a letter
-					convertedAscii := string(b[0])
+					convertedAscii := string(character[0])
 					inputString += convertedAscii
 
 					inputParagraph := ui.NewPar(inputString)
@@ -167,6 +171,38 @@ func main() {
 		rssContentItems = append(rssContentItems, feed.Title)
 		rssContent.Items = rssContentItems
 		ui.Render(addRssHeader, rssNames, rssContent)
+	})
+
+	ui.Handle("j", func(ui.Event) {
+		// get all the strings from the rssNames array
+		// rssNamesCounter will be the 'height'
+
+		// rssNamesItemsClone := rssNamesItems
+		rssNamesItemsClone := []string{}
+		rssNamesItemsClone = append(rssNamesItemsClone, rssNamesItems...)
+
+		rssNamesItemsClone[rssNamesCounter] = "[" +
+			rssNamesItemsClone[rssNamesCounter] +
+			"]" + "(fg-red,bg-green)"
+
+		// reset the Items with the new highlighting
+		rssNames.Items = rssNamesItemsClone
+		// re-render the background
+		ui.Render(addRssHeader, rssNames, rssContent)
+
+		// add one when going down
+		rssNamesCounter++
+	})
+
+	ui.Handle("k", func(ui.Event) {
+		fmt.Println("hello this is k")
+
+		// minus one when going up
+		rssNamesCounter--
+	})
+
+	ui.Handle("tab", func(ui.Event) {
+		fmt.Println("hello this is tab")
 	})
 
 	ui.Loop()
