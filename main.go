@@ -174,8 +174,12 @@ func main() {
 	})
 
 	ui.Handle("j", func(ui.Event) {
-		// add one when going down
-		rssNamesCounter++
+
+		switch {
+		case rssNamesCounter == len(rssNamesItems)-1:
+		default:
+			rssNamesCounter++
+		}
 
 		// get all the strings from the rssNames array
 		// rssNamesCounter will be the 'height'
@@ -196,8 +200,13 @@ func main() {
 	})
 
 	ui.Handle("k", func(ui.Event) {
-		// minus one when going down
-		rssNamesCounter--
+
+		switch {
+		case rssNamesCounter < 1:
+		default:
+			rssNamesCounter--
+		}
+
 		// get all the strings from the rssNames array
 		// rssNamesCounter will be the 'height'
 
