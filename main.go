@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 
 	ui "github.com/gizak/termui"
@@ -11,8 +10,14 @@ import (
 // TODO
 // -start making functions ._.
 
+// focusStack
+// 0 - rssNames
+// 1 - rssContent
+
 var (
-	rssNamesCounter = -1
+	rssNamesCounter   = -1
+	rssContentCounter = -1
+	focusStack        = 0
 )
 
 func getCurrentFocus(stack []string, position int) string {
@@ -186,24 +191,44 @@ func main() {
 
 	ui.Handle("j", func(ui.Event) {
 
-		switch {
-		case rssNamesCounter == len(rssNamesItems)-1:
-		default:
-			rssNamesCounter++
+		// TODO : make this into a function
+		stackClone := []string{}
+
+		if focusStack == 0 {
+			// use the rssNames stack
+			stackClone = append(stackClone, rssNamesItems...)
+			switch {
+			case rssNamesCounter == len(stackClone)-1:
+			default:
+				rssNamesCounter++
+			}
+
+			stackClone[rssNamesCounter] = "[" +
+				stackClone[rssNamesCounter] + "]" +
+				"(fg-red,bg-green)"
+		} else {
+			// use the rssContent stack
+			stackClone = append(stackClone, rssContentItems...)
+			switch {
+			case rssContentCounter == len(stackClone)-1:
+			default:
+				rssContentCounter++
+			}
+			stackClone[rssContentCounter] = "[" +
+				stackClone[rssContentCounter] + "]" +
+				"(fg-red,bg-green)"
 		}
 
-		// rssNamesCounter will be the 'height'
-
-		// rssNamesItemsClone := rssNamesItems
-		rssNamesItemsClone := []string{}
-		rssNamesItemsClone = append(rssNamesItemsClone, rssNamesItems...)
-
-		rssNamesItemsClone[rssNamesCounter] = "[" +
-			rssNamesItemsClone[rssNamesCounter] +
-			"]" + "(fg-red,bg-green)"
+		// TODO : convert this into a regex function
+		// add the syntax highlighting format
 
 		// reset the Items with the new highlighting
-		rssNames.Items = rssNamesItemsClone
+		if focusStack == 0 {
+			rssNames.Items = stackClone
+		} else {
+			rssContent.Items = stackClone
+		}
+
 		// re-render the background
 		ui.Render(addRssHeader, rssNames, rssContent)
 
@@ -211,24 +236,44 @@ func main() {
 
 	ui.Handle("k", func(ui.Event) {
 
-		switch {
-		case rssNamesCounter < 1:
-		default:
-			rssNamesCounter--
+		// TODO : make this into a function
+		stackClone := []string{}
+
+		if focusStack == 0 {
+			// use the rssNames stack
+			stackClone = append(stackClone, rssNamesItems...)
+			switch {
+			case rssNamesCounter < 1:
+			default:
+				rssNamesCounter--
+			}
+
+			stackClone[rssNamesCounter] = "[" +
+				stackClone[rssNamesCounter] + "]" +
+				"(fg-red,bg-green)"
+		} else {
+			// use the rssContent stack
+			stackClone = append(stackClone, rssContentItems...)
+			switch {
+			case rssContentCounter < 1:
+			default:
+				rssContentCounter--
+			}
+			stackClone[rssContentCounter] = "[" +
+				stackClone[rssContentCounter] + "]" +
+				"(fg-red,bg-green)"
 		}
 
-		// rssNamesCounter will be the 'height'
-
-		// rssNamesItemsClone := rssNamesItems
-		rssNamesItemsClone := []string{}
-		rssNamesItemsClone = append(rssNamesItemsClone, rssNamesItems...)
-
-		rssNamesItemsClone[rssNamesCounter] = "[" +
-			rssNamesItemsClone[rssNamesCounter] +
-			"]" + "(fg-red,bg-green)"
+		// TODO : convert this into a regex function
+		// add the syntax highlighting format
 
 		// reset the Items with the new highlighting
-		rssNames.Items = rssNamesItemsClone
+		if focusStack == 0 {
+			rssNames.Items = stackClone
+		} else {
+			rssContent.Items = stackClone
+		}
+
 		// re-render the background
 		ui.Render(addRssHeader, rssNames, rssContent)
 
@@ -236,7 +281,15 @@ func main() {
 
 	ui.Handle("<Tab>", func(ui.Event) {
 		// TODO : switch focus
-		fmt.Println("hello this is tab")
+
+		// 0 == rssNames
+		// 1 == rssContent
+		if focusStack == 0 {
+			focusStack++
+		} else {
+			// switch it back to 0
+			focusStack--
+		}
 	})
 
 	ui.Loop()
