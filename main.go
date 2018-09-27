@@ -178,14 +178,15 @@ func main() {
 		fp := gofeed.NewParser()
 		feed, _ := fp.ParseURL(focusString)
 
-		// fmt.Println(feed.Title)
-		// feed the title to the content stack
+		items := feed.Items
 
-		// TODO : have another stack that serves this while storing
-		// the full json
+		// loop over all the items
+		for i := 0; i < len(items); i++ {
+			rssContentItems = append(rssContentItems, items[i].Title)
+		}
 
-		rssContentItems = append(rssContentItems, feed.Title)
 		rssContent.Items = rssContentItems
+		ui.Clear()
 		ui.Render(addRssHeader, rssNames, rssContent)
 	})
 
