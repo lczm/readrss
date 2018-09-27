@@ -14,6 +14,7 @@ import (
 // focusStack
 // 0 - rssNames
 // 1 - rssContent
+// 2 - rssContentExtended
 
 var (
 	rssNamesCounter   = -1
@@ -193,7 +194,7 @@ func main() {
 			ui.Clear()
 			ui.Render(addRssHeader, rssNames, rssContent)
 
-		} else {
+		} else if focusStack == 1 {
 			focusString := getCurrentFocus(rssContentItems,
 				rssContentCounter)
 
@@ -240,13 +241,23 @@ func main() {
 
 			ui.Clear()
 			ui.Render(rssContentExtended)
+
+			focusStack++
+		} else {
+			fmt.Println("Out of range")
 		}
 
 	})
 
 	// TODO : set this to cancel out rssContentExtended
-	ui.Handle("<Esc>", func(ui.Event) {
-		fmt.Println("hi this is esc")
+	ui.Handle("<Escape>", func(ui.Event) {
+		// if the focus is currently on the rssContentExtended page
+		if focusStack == 2 {
+			ui.Clear()
+			ui.Render(addRssHeader, rssNames, rssContent)
+			// push it back to nothing
+			focusStack--
+		}
 	})
 
 	ui.Handle("j", func(ui.Event) {
