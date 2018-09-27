@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"os/exec"
 
 	ui "github.com/gizak/termui"
 	"github.com/mmcdole/gofeed"
@@ -28,6 +29,13 @@ func getCurrentFocus(stack []string, position int) string {
 
 	focusString := stack[position]
 	return focusString
+}
+
+func openInBrowser(url string) {
+	// uses xdg-open
+	shellCommand := "xdg-open"
+
+	exec.Command(shellCommand, url).Start()
 }
 
 func main() {
@@ -200,15 +208,16 @@ func main() {
 
 			// fmt.Println(fullStack[focusString]["Description"])
 			// fmt.Println(fullStack[focusString]["Link"])
-			fmt.Println(fullStack[focusString]["Published"])
+			// fmt.Println(fullStack[focusString]["Published"])
 
 			// fp := gofeed.NewParser()
 			// feed, _ := fp.ParseURL(focusString)
 			// items := feed.Items
 			// fmt.Println(items)
 
-			// put the items in here
+			// Extended page items
 			rssContentExtendedItems := []string{}
+
 			// Description
 			descriptionString := "Description : " + fullStack[focusString]["Description"]
 			rssContentExtendedItems = append(rssContentExtendedItems, descriptionString)
@@ -245,6 +254,25 @@ func main() {
 			focusStack++
 		} else {
 			fmt.Println("Out of range")
+		}
+
+	})
+
+	ui.Handle("o", func(ui.Event) {
+
+		// mainly will only work
+		// when the focus is on rssContent
+		if focusStack == 1 {
+			// get where the current focus is on
+
+			focusString := getCurrentFocus(rssContentItems, rssContentCounter)
+
+			link := fullStack[focusString]["Link"]
+
+			openInBrowser(link)
+
+			ui.Clear()
+			ui.Render(addRssHeader, rssNames, rssContent)
 		}
 
 	})
