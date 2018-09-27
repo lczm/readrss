@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
 	ui "github.com/gizak/termui"
@@ -19,6 +20,8 @@ var (
 	rssContentCounter = -1
 	focusStack        = 0
 )
+
+var fullStack = make(map[string]map[string]string)
 
 func getCurrentFocus(stack []string, position int) string {
 
@@ -168,26 +171,82 @@ func main() {
 
 	ui.Handle("<Enter>", func(ui.Event) {
 
-		// make sure the counter isnt the default(-1)
-		if rssNamesCounter < 0 {
-			rssNamesCounter = 0
+		if focusStack == 0 {
+			focusString := getCurrentFocus(rssNamesItems,
+				rssNamesCounter)
+			fp := gofeed.NewParser()
+			feed, _ := fp.ParseURL(focusString)
+			items := feed.Items
+			for i := 0; i < len(items); i++ {
+				rssContentItems = append(rssContentItems, items[i].Title)
+				// store an alternate version to reference back
+				tempStack := make(map[string]string)
+
+				tempStack["Description"] = items[i].Description
+				tempStack["Published"] = items[i].Published
+				tempStack["Link"] = items[i].Link
+
+				fullStack[items[i].Title] = tempStack
+
+			}
+			rssContent.Items = rssContentItems
+			ui.Clear()
+			ui.Render(addRssHeader, rssNames, rssContent)
+
+		} else {
+			focusString := getCurrentFocus(rssContentItems,
+				rssContentCounter)
+
+			// fmt.Println(fullStack[focusString]["Description"])
+			// fmt.Println(fullStack[focusString]["Link"])
+			fmt.Println(fullStack[focusString]["Published"])
+
+			// fp := gofeed.NewParser()
+			// feed, _ := fp.ParseURL(focusString)
+			// items := feed.Items
+			// fmt.Println(items)
+
+			// put the items in here
+			rssContentExtendedItems := []string{}
+			// Description
+			descriptionString := "Description : " + fullStack[focusString]["Description"]
+			rssContentExtendedItems = append(rssContentExtendedItems, descriptionString)
+
+			// blank line
+			rssContentExtendedItems = append(rssContentExtendedItems, "")
+
+			// Published
+			publishedString := "Published : " + fullStack[focusString]["Published"]
+			rssContentExtendedItems = append(rssContentExtendedItems, publishedString)
+
+			// blank line
+			rssContentExtendedItems = append(rssContentExtendedItems, "")
+
+			// Link to source
+			linkString := "Link: " + fullStack[focusString]["Link"]
+			rssContentExtendedItems = append(rssContentExtendedItems, linkString)
+
+			// blank line
+			rssContentExtendedItems = append(rssContentExtendedItems, "")
+
+			// widget for the new page
+			rssContentExtended := ui.NewList()
+			rssContentExtended.Overflow = "wrap"
+			rssContentExtended.ItemFgColor = ui.ColorCyan
+			rssContentExtended.Width = termWidth
+			rssContentExtended.Height = termHeight
+
+			rssContentExtended.Items = rssContentExtendedItems
+
+			ui.Clear()
+			ui.Render(rssContentExtended)
 		}
-		// the current 'input' that is being focused
-		focusString := getCurrentFocus(rssNamesItems, rssNamesCounter)
 
-		fp := gofeed.NewParser()
-		feed, _ := fp.ParseURL(focusString)
+	})
 
-		items := feed.Items
-
-		// loop over all the items
-		for i := 0; i < len(items); i++ {
-			rssContentItems = append(rssContentItems, items[i].Title)
-		}
-
-		rssContent.Items = rssContentItems
-		ui.Clear()
-		ui.Render(addRssHeader, rssNames, rssContent)
+	// TODO : set this to cancel out rssContentExtended
+	ui.Handle("<Esc>", func(ui.Event) {
+		fmt.Println("hi this is esc")
 	})
 
 	ui.Handle("j", func(ui.Event) {
