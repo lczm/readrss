@@ -16,6 +16,7 @@ import (
 // 0 - rssNames
 // 1 - rssContent
 // 2 - rssContentExtended
+// 3 - helpPage
 
 var (
 	rssNamesCounter   = -1
@@ -97,6 +98,26 @@ func main() {
 	inputParagraph.Width = 40
 	inputParagraph.X = termWidth/2 - (40 / 2)
 	inputParagraph.Y = termHeight / 2
+
+	// put stuff in here later on
+	helpPageItems := []string{
+		"q : Exit",
+		"a : Add RSS feed",
+		"j : Move down",
+		"k : Move up",
+		"H : Help page [this]",
+		"Tab : Move focus between names and content",
+		"Enter : Get feed / Expand details",
+	}
+	helpPage := ui.NewList()
+	helpPage.Items = helpPageItems
+
+	// positioning
+	helpPage.Width = termWidth
+	helpPage.Height = termHeight
+	// position shouldn't matter as it takes up the whole page
+	helpPage.X = 0
+	helpPage.Y = 0
 
 	ui.Render(addRssHeader, rssNames, rssContent)
 
@@ -251,7 +272,7 @@ func main() {
 			ui.Clear()
 			ui.Render(rssContentExtended)
 
-			focusStack++
+			focusStack = 2
 		} else {
 			fmt.Println("Out of range")
 		}
@@ -284,7 +305,12 @@ func main() {
 			ui.Clear()
 			ui.Render(addRssHeader, rssNames, rssContent)
 			// push it back to nothing
-			focusStack--
+			focusStack = 1
+		} else if focusStack == 3 {
+			ui.Clear()
+			ui.Render(addRssHeader, rssNames, rssContent)
+			// set it back to default
+			focusStack = 1
 		}
 	})
 
@@ -378,16 +404,22 @@ func main() {
 
 	})
 
+	ui.Handle("H", func(ui.Event) {
+		ui.Clear()
+		ui.Render(helpPage)
+		focusStack = 3
+	})
+
 	ui.Handle("<Tab>", func(ui.Event) {
 		// TODO : switch focus
 
 		// 0 == rssNames
 		// 1 == rssContent
 		if focusStack == 0 {
-			focusStack++
+			focusStack = 1
 		} else {
 			// switch it back to 0
-			focusStack--
+			focusStack = 0
 		}
 	})
 
