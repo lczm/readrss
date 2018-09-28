@@ -68,12 +68,15 @@ func main() {
 
 	rssContentItems := []string{}
 
+	// widget declarations
+
 	addRssHeader := ui.NewList()
 	addRssHeader.Items = rssHeader
 	addRssHeader.Overflow = "wrap"
 	addRssHeader.ItemFgColor = ui.ColorCyan
 	addRssHeader.Width = leftWidth
 	addRssHeader.Height = addRssHeaderHeight
+	addRssHeader.BorderFg = ui.ColorBlue
 
 	rssNames := ui.NewList()
 	rssNames.Items = rssNamesItems
@@ -83,6 +86,7 @@ func main() {
 	rssNames.Height = rssNamesHeight
 	// offset of the Y is the height of the top widget
 	rssNames.Y = addRssHeaderHeight
+	rssNames.BorderFg = ui.ColorMagenta
 
 	rssContent := ui.NewList()
 	rssContent.Items = rssContentItems
@@ -91,6 +95,7 @@ func main() {
 	rssContent.X = halfWidth
 	rssContent.Width = rightWidth
 	rssContent.Height = rssContentHeight
+	rssContent.BorderFg = ui.ColorDefault
 
 	inputString := ""
 	inputParagraph := ui.NewPar(inputString)
@@ -98,6 +103,7 @@ func main() {
 	inputParagraph.Width = 40
 	inputParagraph.X = termWidth/2 - (40 / 2)
 	inputParagraph.Y = termHeight / 2
+	inputParagraph.BorderFg = ui.ColorDefault
 
 	// put stuff in here later on
 	helpPageItems := []string{
@@ -266,6 +272,7 @@ func main() {
 			rssContentExtended.ItemFgColor = ui.ColorCyan
 			rssContentExtended.Width = termWidth
 			rssContentExtended.Height = termHeight
+			rssContentExtended.BorderFg = ui.ColorMagenta
 
 			rssContentExtended.Items = rssContentExtendedItems
 
@@ -417,9 +424,21 @@ func main() {
 		// 1 == rssContent
 		if focusStack == 0 {
 			focusStack = 1
-		} else {
+			rssNames.BorderFg = ui.ColorDefault
+			rssContent.BorderFg = ui.ColorMagenta
+			ui.Clear()
+			ui.Render(addRssHeader, rssNames, rssContent)
+		} else if focusStack == 1 {
 			// switch it back to 0
 			focusStack = 0
+			rssNames.BorderFg = ui.ColorMagenta
+			rssContent.BorderFg = ui.ColorDefault
+			ui.Clear()
+			ui.Render(addRssHeader, rssNames, rssContent)
+		} else {
+			focusStack = 0
+			ui.Clear()
+			ui.Render(addRssHeader, rssNames, rssContent)
 		}
 	})
 
