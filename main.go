@@ -8,9 +8,6 @@ import (
 	"github.com/mmcdole/gofeed"
 )
 
-// TODO
-// -start making functions ._.
-
 // focusStack
 // 0 - rssNames
 // 1 - rssContent
@@ -130,7 +127,10 @@ func main() {
 		"H : Help page [this]",
 		"Tab : Move focus between names and content",
 		"Enter : Get feed / Expand details",
+		"Esc : Escape out of current mode",
+		"Press Esc to get out of this screen",
 	}
+
 	helpPage := ui.NewList()
 	helpPage.Items = helpPageItems
 
