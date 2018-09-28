@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 	"os/exec"
 
@@ -16,7 +15,7 @@ import (
 // 0 - rssNames
 // 1 - rssContent
 // 2 - rssContentExtended
-// 3 - helpPage
+// 3 - helpPage / errorPage
 
 var (
 	rssNamesCounter   = -1
@@ -37,6 +36,23 @@ func openInBrowser(url string) {
 	shellCommand := "xdg-open"
 
 	exec.Command(shellCommand, url).Start()
+}
+
+func errorPage(width int, height int, content []string) {
+
+	page := ui.NewList()
+	page.Items = content
+	page.Overflow = "wrap"
+	page.Width = width
+	page.Height = height
+
+	page.ItemFgColor = ui.ColorRed
+	page.BorderFg = ui.ColorRed
+
+	ui.Clear()
+	ui.Render(page)
+
+	focusStack = 3
 }
 
 func main() {
@@ -144,7 +160,6 @@ func main() {
 			if input == 1 {
 				// if its an escape - break out of the loop
 				if character[0] == 27 {
-					break inputloop
 				} else if character[0] == 8 && len(inputString) > 0 ||
 					// back spaces
 					character[0] == 127 && len(inputString) > 0 {
@@ -208,80 +223,103 @@ func main() {
 	ui.Handle("<Enter>", func(ui.Event) {
 
 		if focusStack == 0 {
-			focusString := getCurrentFocus(rssNamesItems,
-				rssNamesCounter)
-			fp := gofeed.NewParser()
-			feed, _ := fp.ParseURL(focusString)
-			items := feed.Items
-			for i := 0; i < len(items); i++ {
-				rssContentItems = append(rssContentItems, items[i].Title)
-				// store an alternate version to reference back
-				tempStack := make(map[string]string)
+			if len(rssNamesItems) < 1 {
+				// Error
+				// ui.Clear()
+				// ui.Render(addRssHeader, rssNames, rssContent)
 
-				tempStack["Description"] = items[i].Description
-				tempStack["Published"] = items[i].Published
-				tempStack["Link"] = items[i].Link
+				contents := []string{
+					"There is currently no content in the header",
+				}
 
-				fullStack[items[i].Title] = tempStack
+				errorPage(termWidth, termHeight, contents)
+			} else {
+				focusString := getCurrentFocus(rssNamesItems,
+					rssNamesCounter)
+				fp := gofeed.NewParser()
+				feed, _ := fp.ParseURL(focusString)
+				items := feed.Items
+				for i := 0; i < len(items); i++ {
+					rssContentItems = append(rssContentItems, items[i].Title)
+					// store an alternate version to reference back
+					tempStack := make(map[string]string)
 
+					tempStack["Description"] = items[i].Description
+					tempStack["Published"] = items[i].Published
+					tempStack["Link"] = items[i].Link
+
+					fullStack[items[i].Title] = tempStack
+
+				}
+				rssContent.Items = rssContentItems
+				ui.Clear()
+				ui.Render(addRssHeader, rssNames, rssContent)
 			}
-			rssContent.Items = rssContentItems
-			ui.Clear()
-			ui.Render(addRssHeader, rssNames, rssContent)
 
 		} else if focusStack == 1 {
-			focusString := getCurrentFocus(rssContentItems,
-				rssContentCounter)
+			if len(rssContentItems) < 1 {
+				contents := []string{
+					"There is currently no content in the header",
+				}
 
-			// fmt.Println(fullStack[focusString]["Description"])
-			// fmt.Println(fullStack[focusString]["Link"])
-			// fmt.Println(fullStack[focusString]["Published"])
+				errorPage(termWidth, termHeight, contents)
+			} else {
+				focusString := getCurrentFocus(rssContentItems,
+					rssContentCounter)
 
-			// fp := gofeed.NewParser()
-			// feed, _ := fp.ParseURL(focusString)
-			// items := feed.Items
-			// fmt.Println(items)
+				// fmt.Println(fullStack[focusString]["Description"])
+				// fmt.Println(fullStack[focusString]["Link"])
+				// fmt.Println(fullStack[focusString]["Published"])
 
-			// Extended page items
-			rssContentExtendedItems := []string{}
+				// fp := gofeed.NewParser()
+				// feed, _ := fp.ParseURL(focusString)
+				// items := feed.Items
+				// fmt.Println(items)
 
-			// Description
-			descriptionString := "Description : " + fullStack[focusString]["Description"]
-			rssContentExtendedItems = append(rssContentExtendedItems, descriptionString)
+				// Extended page items
+				rssContentExtendedItems := []string{}
 
-			// blank line
-			rssContentExtendedItems = append(rssContentExtendedItems, "")
+				// Description
+				descriptionString := "Description : " + fullStack[focusString]["Description"]
+				rssContentExtendedItems = append(rssContentExtendedItems, descriptionString)
 
-			// Published
-			publishedString := "Published : " + fullStack[focusString]["Published"]
-			rssContentExtendedItems = append(rssContentExtendedItems, publishedString)
+				// blank line
+				rssContentExtendedItems = append(rssContentExtendedItems, "")
 
-			// blank line
-			rssContentExtendedItems = append(rssContentExtendedItems, "")
+				// Published
+				publishedString := "Published : " + fullStack[focusString]["Published"]
+				rssContentExtendedItems = append(rssContentExtendedItems, publishedString)
 
-			// Link to source
-			linkString := "Link: " + fullStack[focusString]["Link"]
-			rssContentExtendedItems = append(rssContentExtendedItems, linkString)
+				// blank line
+				rssContentExtendedItems = append(rssContentExtendedItems, "")
 
-			// blank line
-			rssContentExtendedItems = append(rssContentExtendedItems, "")
+				// Link to source
+				linkString := "Link: " + fullStack[focusString]["Link"]
+				rssContentExtendedItems = append(rssContentExtendedItems, linkString)
 
-			// widget for the new page
-			rssContentExtended := ui.NewList()
-			rssContentExtended.Overflow = "wrap"
-			rssContentExtended.ItemFgColor = ui.ColorCyan
-			rssContentExtended.Width = termWidth
-			rssContentExtended.Height = termHeight
-			rssContentExtended.BorderFg = ui.ColorMagenta
+				// blank line
+				rssContentExtendedItems = append(rssContentExtendedItems, "")
 
-			rssContentExtended.Items = rssContentExtendedItems
+				// widget for the new page
+				rssContentExtended := ui.NewList()
+				rssContentExtended.Overflow = "wrap"
+				rssContentExtended.ItemFgColor = ui.ColorCyan
+				rssContentExtended.Width = termWidth
+				rssContentExtended.Height = termHeight
+				rssContentExtended.BorderFg = ui.ColorMagenta
 
-			ui.Clear()
-			ui.Render(rssContentExtended)
+				rssContentExtended.Items = rssContentExtendedItems
 
-			focusStack = 2
+				ui.Clear()
+				ui.Render(rssContentExtended)
+
+				focusStack = 2
+			}
 		} else {
-			fmt.Println("Out of range")
+			contents := []string{
+				"There is currently no content in the header",
+			}
+			errorPage(termWidth, termHeight, contents)
 		}
 
 	})
