@@ -150,6 +150,7 @@ func main() {
 		"j : Move down",
 		"k : Move up",
 		"H : Help page [this]",
+		"o : Open in browser",
 		"Tab : Move focus between names and content",
 		"Enter : Get feed / Expand details",
 		"Esc : Escape out of current mode",
