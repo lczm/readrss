@@ -4,6 +4,7 @@
 ![Preview](preview.gif)
 
 ## Configuration - example
+Name it config.json and put it in the same directory
 ```
 {
     "Rss": [
