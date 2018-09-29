@@ -22,25 +22,25 @@ Ensure that you have dependencies installed (dependencies below)
 Go Build/Run readrss.go and use it
 
 ## Hotkeys
-"q : Exit"
+q : Exit
 
-"a : Add RSS feed"
+a : Add RSS feed
 
-"j : Move down"
+j : Move down
 
-"k : Move up"
+k : Move up
 
-"o : Open in browser"
+o : Open in browser
 
-"H : Help page [this]"
+H : Help page [this]
 
-"Tab : Move focus between names and content"
+Tab : Move focus between names and content
 
-"Enter : Get feed / Expand details"
+Enter : Get feed / Expand details
 
-"Esc : Escape out of current mode"
+Esc : Escape out of current mode
 
-"Press Esc to get out of this screen"
+Press Esc to get out of this screen
 
 ## Libraries
 [gofeed](https://github.com/mmcdole/gofeed)
