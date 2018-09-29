@@ -1,6 +1,8 @@
 package main
 
 import (
+	"encoding/json"
+	"fmt"
 	"os"
 	"os/exec"
 
@@ -14,13 +16,16 @@ import (
 // 2 - rssContentExtended
 // 3 - helpPage / errorPage
 
+type Configuration struct {
+	Rss []string
+}
+
 var (
 	rssNamesCounter   = -1
 	rssContentCounter = -1
 	focusStack        = 0
+	fullStack         = make(map[string]map[string]string)
 )
-
-var fullStack = make(map[string]map[string]string)
 
 func getCurrentFocus(stack []string, position int) string {
 
@@ -52,6 +57,19 @@ func errorPage(width int, height int, content []string) {
 	focusStack = 3
 }
 
+func getConfig() []string {
+	file, _ := os.Open("config.json")
+	defer file.Close()
+	decoder := json.NewDecoder(file)
+	configuration := Configuration{}
+	err := decoder.Decode(&configuration)
+	if err != nil {
+		fmt.Println("error:", err)
+	}
+
+	return configuration.Rss
+}
+
 func main() {
 	err := ui.Init()
 	if err != nil {
@@ -73,11 +91,18 @@ func main() {
 	rssNamesHeight := termHeight - addRssHeaderHeight
 	rssContentHeight := termHeight
 
+	// get the contents of config file for rss links
+	configRss := getConfig()
+
 	rssHeader := []string{
-		"Press 'a/A' to Add a RSS Feed",
+		"Press 'a' to Add a RSS Feed",
 	}
 
 	rssNamesItems := []string{}
+
+	for i := 0; i < len(configRss); i++ {
+		rssNamesItems = append(rssNamesItems, configRss[i])
+	}
 
 	rssContentItems := []string{}
 
@@ -266,15 +291,6 @@ func main() {
 			} else {
 				focusString := getCurrentFocus(rssContentItems,
 					rssContentCounter)
-
-				// fmt.Println(fullStack[focusString]["Description"])
-				// fmt.Println(fullStack[focusString]["Link"])
-				// fmt.Println(fullStack[focusString]["Published"])
-
-				// fp := gofeed.NewParser()
-				// feed, _ := fp.ParseURL(focusString)
-				// items := feed.Items
-				// fmt.Println(items)
 
 				// Extended page items
 				rssContentExtendedItems := []string{}
