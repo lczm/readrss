@@ -45,3 +45,5 @@ Go Build/Run readrss.go and use it
 [gofeed](https://github.com/mmcdole/gofeed)
 
 [termui](https://github.com/gizak/termui)
+
+##### Dont look at code its some extreme spagetti
