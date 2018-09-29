@@ -41,7 +41,7 @@ Go Build/Run readrss.go and use it
 
 "Press Esc to get out of this screen"
 
-## Dependencies
+## Libraries
 [gofeed](https://github.com/mmcdole/gofeed)
 
 [termui](https://github.com/gizak/termui)
