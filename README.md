@@ -46,4 +46,5 @@ Go Build/Run readrss.go and use it
 
 [termui](https://github.com/gizak/termui)
 
-##### Dont look at code its some extreme spagetti
+##### Note
+Dont look at my code its some extreme spagetti
