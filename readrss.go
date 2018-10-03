@@ -124,7 +124,8 @@ func main() {
 	rssNames.Height = rssNamesHeight
 	// offset of the Y is the height of the top widget
 	rssNames.Y = addRssHeaderHeight
-	rssNames.BorderFg = ui.ColorMagenta
+	// rssNames.BorderFg = ui.ColorMagenta
+	rssNames.BorderFg = ui.ColorRGB(255, 0, 0)
 
 	rssContent := ui.NewList()
 	rssContent.Items = rssContentItems
@@ -137,8 +138,8 @@ func main() {
 
 	inputString := ""
 	inputParagraph := ui.NewPar(inputString)
-	inputParagraph.Height = 3
 	inputParagraph.Width = 40
+	inputParagraph.Height = 3
 	inputParagraph.X = termWidth/2 - (40 / 2)
 	inputParagraph.Y = termHeight / 2
 	inputParagraph.BorderFg = ui.ColorDefault
@@ -473,7 +474,6 @@ func main() {
 	})
 
 	ui.Handle("<Tab>", func(ui.Event) {
-		// TODO : switch focus
 
 		// 0 == rssNames
 		// 1 == rssContent
