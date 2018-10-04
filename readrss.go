@@ -5,56 +5,16 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strings"
+	"time"
 
 	ui "github.com/gizak/termui"
 	"github.com/mmcdole/gofeed"
 )
 
-// focusStack
-// 0 - rssNames
-// 1 - rssContent
-// 2 - rssContentExtended
-// 3 - helpPage / errorPage
-
+// struct for loading json
 type Configuration struct {
 	Rss []string
-}
-
-var (
-	rssNamesCounter   = -1
-	rssContentCounter = -1
-	focusStack        = 0
-	fullStack         = make(map[string]map[string]string)
-)
-
-func getCurrentFocus(stack []string, position int) string {
-
-	focusString := stack[position]
-	return focusString
-}
-
-func openInBrowser(url string) {
-	// uses xdg-open
-	shellCommand := "xdg-open"
-
-	exec.Command(shellCommand, url).Start()
-}
-
-func errorPage(width int, height int, content []string) {
-
-	page := ui.NewList()
-	page.Items = content
-	page.Overflow = "wrap"
-	page.Width = width
-	page.Height = height
-
-	page.ItemFgColor = ui.ColorRed
-	page.BorderFg = ui.ColorRed
-
-	ui.Clear()
-	ui.Render(page)
-
-	focusStack = 3
 }
 
 func getConfig() []string {
@@ -66,8 +26,119 @@ func getConfig() []string {
 	if err != nil {
 		fmt.Println("error:", err)
 	}
-
 	return configuration.Rss
+}
+
+type widgetMaker struct {
+	List *ui.List
+	Par  *ui.Par
+}
+
+func getTermSize() (int, int) {
+	width := ui.TermWidth()
+	height := ui.TermHeight()
+	return width, height
+}
+
+func makeListWidget(content []string, label string, width int, height int,
+	x int, y int, colour string) *widgetMaker {
+
+	widgetList := ui.NewList()
+	widgetList.Items = content
+	widgetList.Overflow = "wrap"
+	widgetList.ItemFgColor = ui.ColorWhite
+	widgetList.Width = width
+	widgetList.Height = height
+
+	widgetList.X = x // x location
+	widgetList.Y = y // y location
+
+	widgetList.BorderLabel = label
+
+	// TODO : tidy this up
+
+	switch {
+	case colour == "Red":
+		widgetList.BorderFg = ui.ColorRed
+	case colour == "Magenta":
+		widgetList.BorderFg = ui.ColorMagenta
+	case colour == "Cyan":
+		widgetList.BorderFg = ui.ColorCyan
+	case colour == "Black":
+		widgetList.BorderFg = ui.ColorBlack
+	case colour == "White":
+		widgetList.BorderFg = ui.ColorWhite
+	case colour == "Default":
+		widgetList.BorderFg = ui.ColorDefault
+	case colour == "Yellow":
+		widgetList.BorderFg = ui.ColorYellow
+	case colour == "Green":
+		widgetList.BorderFg = ui.ColorGreen
+	default:
+		widgetList.BorderFg = ui.ColorDefault
+	}
+
+	return &widgetMaker{List: widgetList}
+}
+
+func makeParWidget(content string, width int, height int,
+	x int, y int, colour string) *widgetMaker {
+
+	widgetPar := ui.NewPar(content)
+	widgetPar.Width = width
+	widgetPar.Height = height
+	widgetPar.X = x // x location
+	widgetPar.Y = y // y location
+
+	switch {
+	case colour == "Red":
+		widgetPar.BorderFg = ui.ColorRed
+	case colour == "Magenta":
+		widgetPar.BorderFg = ui.ColorMagenta
+	case colour == "Cyan":
+		widgetPar.BorderFg = ui.ColorCyan
+	case colour == "Black":
+		widgetPar.BorderFg = ui.ColorBlack
+	case colour == "White":
+		widgetPar.BorderFg = ui.ColorWhite
+	case colour == "Default":
+		widgetPar.BorderFg = ui.ColorDefault
+	case colour == "Yellow":
+		widgetPar.BorderFg = ui.ColorYellow
+	case colour == "Green":
+		widgetPar.BorderFg = ui.ColorGreen
+	default:
+		widgetPar.BorderFg = ui.ColorDefault
+	}
+
+	return &widgetMaker{Par: widgetPar}
+}
+
+func openInBrowser(url string) {
+	// uses xdg-open
+	shellCommand := "xdg-open"
+	exec.Command(shellCommand, url).Start()
+}
+
+// rssHeaders.Items = highlightFocus(rssHeaders.Items, 0) - example usage
+func highlightFocus(array []string, position int) []string {
+	array[position] = "[" + array[position] + "]" + "(fg-red,bg-green)"
+	return array
+}
+
+func characterFunction(starterString string, character []byte) string {
+
+	if character[0] == 127 && len(starterString) > 0 {
+		starterString = starterString[:len(starterString)-1]
+	} else {
+		starterString += string(character[0])
+	}
+	return starterString
+}
+
+func changeWidthHeight(widget *widgetMaker, width int, height int) {
+	widget.List.Width = width
+	widget.List.Height = height
 }
 
 func main() {
@@ -77,425 +148,261 @@ func main() {
 	}
 	defer ui.Close()
 
-	// gets the width of the terminal
-	termWidth := ui.TermWidth()
-	// gets the height of the terminal
-	termHeight := ui.TermHeight()
+	// state declaration
+	state := make(map[string]int)
+	state["rssHeaderCounter"] = -1
+	state["rssContentCounter"] = -1
+	state["focusStack"] = 0
 
-	halfWidth := termWidth / 2
+	fullStack := make(map[string]map[string]string)
 
-	leftWidth := halfWidth
-	rightWidth := termWidth - halfWidth
+	// originalWidth, originalHeight := getTermSize()
+	originalWidth := ui.TermWidth()
+	originalHeight := ui.TermHeight()
 
-	addRssHeaderHeight := 3
-	rssNamesHeight := termHeight - addRssHeaderHeight
-	rssContentHeight := termHeight
+	termWidth := &originalWidth
+	termHeight := &originalHeight
 
-	// get the contents of config file for rss links
-	configRss := getConfig()
+	// contents of config file
+	rssHeadersItems := getConfig()
+	rssContentsItems := []string{}
 
-	rssHeader := []string{
-		"Press 'a' to Add a RSS Feed",
-	}
+	// rssHeaders := makeListWidget(rssHeadersItems, "Feed", termWidth/2,
+	// 	termHeight, 0, 0, "Magenta")
+	// rssContents := makeListWidget(rssContentsItems, "Content", termWidth/2,
+	// 	termHeight, termWidth/2, 0, "White")
+	rssHeaders := makeListWidget(rssHeadersItems, "Feed", *termWidth/2, *termHeight, 0, 0, "Magenta")
+	rssContents := makeListWidget(rssContentsItems, "Content", *termWidth/2, *termHeight, *termWidth/2, 0, "White")
 
-	rssNamesItems := []string{}
-
-	for i := 0; i < len(configRss); i++ {
-		rssNamesItems = append(rssNamesItems, configRss[i])
-	}
-
-	rssContentItems := []string{}
-
-	// widget declarations
-
-	addRssHeader := ui.NewList()
-	addRssHeader.Items = rssHeader
-	addRssHeader.Overflow = "wrap"
-	addRssHeader.ItemFgColor = ui.ColorCyan
-	addRssHeader.Width = leftWidth
-	addRssHeader.Height = addRssHeaderHeight
-	addRssHeader.BorderFg = ui.ColorBlue
-
-	rssNames := ui.NewList()
-	rssNames.Items = rssNamesItems
-	rssNames.Overflow = "wrap"
-	rssNames.ItemFgColor = ui.ColorCyan
-	rssNames.Width = leftWidth
-	rssNames.Height = rssNamesHeight
-	// offset of the Y is the height of the top widget
-	rssNames.Y = addRssHeaderHeight
-	// rssNames.BorderFg = ui.ColorMagenta
-	rssNames.BorderFg = ui.ColorRGB(255, 0, 0)
-
-	rssContent := ui.NewList()
-	rssContent.Items = rssContentItems
-	rssContent.Overflow = "wrap"
-	rssContent.ItemFgColor = ui.ColorCyan
-	rssContent.X = halfWidth
-	rssContent.Width = rightWidth
-	rssContent.Height = rssContentHeight
-	rssContent.BorderFg = ui.ColorDefault
-
-	inputString := ""
-	inputParagraph := ui.NewPar(inputString)
-	inputParagraph.Width = 40
-	inputParagraph.Height = 3
-	inputParagraph.X = termWidth/2 - (40 / 2)
-	inputParagraph.Y = termHeight / 2
-	inputParagraph.BorderFg = ui.ColorDefault
-
-	// put stuff in here later on
-	helpPageItems := []string{
-		"q : Exit",
-		"a : Add RSS feed",
-		"j : Move down",
-		"k : Move up",
-		"H : Help page [this]",
-		"o : Open in browser",
-		"Tab : Move focus between names and content",
-		"Enter : Get feed / Expand details",
-		"Esc : Escape out of current mode",
-		"Press Esc to get out of this screen",
-	}
-
-	helpPage := ui.NewList()
-	helpPage.Items = helpPageItems
-
-	// positioning
-	helpPage.Width = termWidth
-	helpPage.Height = termHeight
-	// position shouldn't matter as it takes up the whole page
-	helpPage.X = 0
-	helpPage.Y = 0
-
-	ui.Render(addRssHeader, rssNames, rssContent)
-
-	ui.Handle("q", func(ui.Event) {
-		ui.StopLoop()
-	})
+	ui.Render(rssHeaders.List, rssContents.List)
 
 	ui.Handle("a", func(ui.Event) {
-		ui.Render(inputParagraph)
+		contentString := ""
+		inputParagraph := makeParWidget(contentString, 40, 3,
+			*termWidth/2-(40/2), *termHeight/2, "Default")
+		ui.Render(inputParagraph.Par)
+
 	inputloop:
 		for {
-
 			character := make([]byte, 1, 1)
-			// read from the standard input and do some processing
 			input, _ := os.Stdin.Read(character)
-
-			// TODO : check if whatever is entered is a valid url
 			if input == 1 {
-				// if its an escape - break out of the loop
-				if character[0] == 27 {
-				} else if character[0] == 8 && len(inputString) > 0 ||
-					// back spaces
-					character[0] == 127 && len(inputString) > 0 {
-					// remove the last character of the string
-					inputString = inputString[:len(inputString)-1]
-
-					inputParagraph := ui.NewPar(inputString)
-					inputParagraph.Height = 3
-					inputParagraph.Width = 40
-					inputParagraph.X = termWidth/2 - (40 / 2)
-					inputParagraph.Y = termHeight / 2
-
-					// clears the entire screen
-					ui.Clear()
-					// render the background
-					ui.Render(addRssHeader, rssNames, rssContent)
-					// render the new textbox
-					ui.Render(inputParagraph)
-				} else if character[0] == 13 {
-					// if its an enter - save & submit
-					if len(inputString) < 1 {
-						ui.Clear()
-						break inputloop
-					}
-					rssNamesItems = append(rssNamesItems, inputString)
-					rssNames.Items = rssNamesItems
-
-					// reset the string so the previous
-					// input is wiped
-					inputString = ""
+				switch {
+				case character[0] == 27: // escape
+					break inputloop
+				case character[0] == 13: // enter
+					// save the inputString to somewhere
+					rssHeadersItems = append(rssHeadersItems, contentString)
+					rssHeaders.List.Items = rssHeadersItems
 
 					break inputloop
-				} else {
-					// convert b[0] to a letter
-					convertedAscii := string(character[0])
-					inputString += convertedAscii
-
-					inputParagraph := ui.NewPar(inputString)
-					inputParagraph.Height = 3
-					inputParagraph.Width = 40
-					inputParagraph.X = termWidth/2 - (40 / 2)
-					inputParagraph.Y = termHeight / 2
-
-					// clears the entire screen
-					ui.Clear()
-					// render the background
-					ui.Render(addRssHeader, rssNames, rssContent)
-					// render the new textbox
-					ui.Render(inputParagraph)
 				}
+				// feed character into a function
+				contentString = characterFunction(contentString, character)
+				inputParagraph := makeParWidget(contentString, 40, 3,
+					*termWidth/2-(40/2), *termHeight/2, "Default")
+
+				ui.Clear()
+				ui.Render(rssHeaders.List, rssContents.List)
+				ui.Render(inputParagraph.Par)
 			} else {
-				// if its not a valid character
 				break inputloop
 			}
 		}
-
 		ui.Clear()
-		ui.Render(addRssHeader, rssNames, rssContent)
+		ui.Render(rssHeaders.List, rssContents.List)
+	})
+
+	ui.Handle("q", func(ui.Event) { ui.StopLoop() })
+	ui.Handle("j", func(ui.Event) { // go down in terms of focus
+		stackClone := []string{}
+
+		rssHeaders := makeListWidget(rssHeadersItems, "Feed", *termWidth/2, *termHeight, 0, 0, "Magenta")
+		rssContents := makeListWidget(rssContentsItems, "Content", *termWidth/2, *termHeight, *termWidth/2, 0, "White")
+
+		switch {
+		case state["focusStack"] == 0:
+			switch {
+			case state["rssHeaderCounter"] < 0:
+				state["rssHeaderCounter"] = 0
+			case state["rssHeaderCounter"] >= len(rssHeadersItems)-1:
+			default:
+				state["rssHeaderCounter"]++
+			}
+			stackClone = append(stackClone, rssHeadersItems...)
+			stackClone = highlightFocus(stackClone, state["rssHeaderCounter"])
+			rssHeaders.List.Items = stackClone
+			ui.Render(rssHeaders.List, rssContents.List)
+		case state["focusStack"] == 1:
+			switch {
+			case state["rssContentCounter"] < 0:
+				state["rssContentCounter"] = 0
+			case state["rssContentCounter"] >= len(rssContentsItems)-1:
+			default:
+				state["rssContentCounter"]++
+			}
+			stackClone = append(stackClone, rssContentsItems...)
+			stackClone = highlightFocus(stackClone, state["rssContentCounter"])
+			rssContents.List.Items = stackClone
+			ui.Render(rssHeaders.List, rssContents.List)
+		default:
+		}
+
+	})
+	ui.Handle("k", func(ui.Event) { // go up in terms of focus
+		stackClone := []string{}
+
+		rssHeaders := makeListWidget(rssHeadersItems, "Feed", *termWidth/2, *termHeight, 0, 0, "Magenta")
+		rssContents := makeListWidget(rssContentsItems, "Content", *termWidth/2, *termHeight, *termWidth/2, 0, "White")
+
+		switch {
+		case state["focusStack"] == 0:
+			switch {
+			case state["rssHeaderCounter"] < 1:
+				state["rssHeaderCounter"] = 0
+			default:
+				state["rssHeaderCounter"]--
+			}
+			stackClone = append(stackClone, rssHeadersItems...)
+			stackClone = highlightFocus(stackClone, state["rssHeaderCounter"])
+			rssHeaders.List.Items = stackClone
+			ui.Render(rssHeaders.List, rssContents.List)
+		case state["focusStack"] == 1:
+			switch {
+			case state["rssContentCounter"] < 1:
+			default:
+				state["rssContentCounter"]--
+			}
+			stackClone = append(stackClone, rssContentsItems...)
+			stackClone = highlightFocus(stackClone, state["rssContentCounter"])
+			rssContents.List.Items = stackClone
+			ui.Render(rssHeaders.List, rssContents.List)
+		default:
+		}
+
+	})
+	ui.Handle("o", func(ui.Event) {
+		// open the current link in the browser
+		switch {
+		case state["focusStack"] == 1:
+			focusString := rssContentsItems[state["rssContentCounter"]]
+			link := fullStack[focusString]["Link"]
+			openInBrowser(link)
+		}
+	})
+	ui.Handle("H", func(ui.Event) {
+		helpPageContent := []string{
+			"q : Exit",
+			"a : Add RSS feed",
+			"j : Move down",
+			"k : Move up",
+			"H : Help page [this]",
+			"o : Open in browser",
+			"Tab : Move focus between names and content",
+			"Enter : Get feed / Expand details",
+			"Esc : Escape out of current mode",
+			"Press Esc to get out of this screen",
+		}
+		helpPage := makeListWidget(helpPageContent, "Help", *termWidth, *termHeight, 0, 0, "")
+		ui.Render(helpPage.List)
+		state["focusStack"] = 3 // set focusStack to 3
+	})
+	ui.Handle("<Tab>", func(ui.Event) {
+		switch {
+		case state["focusStack"] == 0:
+			state["focusStack"] = 1
+			rssHeaders.List.BorderFg = ui.ColorWhite
+			rssContents.List.BorderFg = ui.ColorMagenta
+			ui.Render(rssHeaders.List, rssContents.List)
+		case state["focusStack"] == 1:
+			state["focusStack"] = 0
+			rssHeaders.List.BorderFg = ui.ColorMagenta
+			rssContents.List.BorderFg = ui.ColorWhite
+			ui.Render(rssHeaders.List, rssContents.List)
+		}
 	})
 
 	ui.Handle("<Enter>", func(ui.Event) {
-
-		if focusStack == 0 {
-			if len(rssNamesItems) < 1 {
-				// Error
-				// ui.Clear()
-				// ui.Render(addRssHeader, rssNames, rssContent)
-
-				contents := []string{
-					"There is currently no content in the header",
-				}
-
-				errorPage(termWidth, termHeight, contents)
-			} else {
-				focusString := getCurrentFocus(rssNamesItems,
-					rssNamesCounter)
-				fp := gofeed.NewParser()
-				feed, _ := fp.ParseURL(focusString)
-				items := feed.Items
-				for i := 0; i < len(items); i++ {
-					rssContentItems = append(rssContentItems, items[i].Title)
-					// store an alternate version to reference back
-					tempStack := make(map[string]string)
-
-					tempStack["Description"] = items[i].Description
-					tempStack["Published"] = items[i].Published
-					tempStack["Link"] = items[i].Link
-
-					fullStack[items[i].Title] = tempStack
-
-				}
-				rssContent.Items = rssContentItems
+		switch {
+		case state["focusStack"] == 0:
+			if len(rssHeadersItems) < 1 {
+				errorPage := makeParWidget(
+					"There is currently no links",
+					40, 3, *termWidth/2-(40/2), *termHeight, "",
+				)
+				ui.Render(errorPage.Par)
+				time.Sleep(3 * time.Second) // show for three seconds
 				ui.Clear()
-				ui.Render(addRssHeader, rssNames, rssContent)
+				ui.Render(rssHeaders.List, rssContents.List)
+				break
 			}
-
-		} else if focusStack == 1 {
-			if len(rssContentItems) < 1 {
-				contents := []string{
-					"There is currently no content in the header",
-				}
-
-				errorPage(termWidth, termHeight, contents)
-			} else {
-				focusString := getCurrentFocus(rssContentItems,
-					rssContentCounter)
-
-				// Extended page items
-				rssContentExtendedItems := []string{}
-
-				// Description
-				descriptionString := "Description : " + fullStack[focusString]["Description"]
-				rssContentExtendedItems = append(rssContentExtendedItems, descriptionString)
-
-				// blank line
-				rssContentExtendedItems = append(rssContentExtendedItems, "")
-
-				// Published
-				publishedString := "Published : " + fullStack[focusString]["Published"]
-				rssContentExtendedItems = append(rssContentExtendedItems, publishedString)
-
-				// blank line
-				rssContentExtendedItems = append(rssContentExtendedItems, "")
-
-				// Link to source
-				linkString := "Link: " + fullStack[focusString]["Link"]
-				rssContentExtendedItems = append(rssContentExtendedItems, linkString)
-
-				// blank line
-				rssContentExtendedItems = append(rssContentExtendedItems, "")
-
-				// widget for the new page
-				rssContentExtended := ui.NewList()
-				rssContentExtended.Overflow = "wrap"
-				rssContentExtended.ItemFgColor = ui.ColorCyan
-				rssContentExtended.Width = termWidth
-				rssContentExtended.Height = termHeight
-				rssContentExtended.BorderFg = ui.ColorMagenta
-
-				rssContentExtended.Items = rssContentExtendedItems
-
+			focusString := rssHeadersItems[state["rssHeaderCounter"]]
+			// check if http is contained in side the string
+			if strings.Contains(focusString, "http") == false {
+				notValid := makeParWidget("Not a valid rss link",
+					40, 3, *termWidth/2-(40/2), *termHeight/2, "Red")
+				ui.Render(notValid.Par)
+				time.Sleep(3 * time.Second)
 				ui.Clear()
-				ui.Render(rssContentExtended)
-
-				focusStack = 2
+				ui.Render(rssHeaders.List, rssContents.List)
+				break
 			}
-		} else {
-			contents := []string{
-				"There is currently no content in the header",
+			fp := gofeed.NewParser()
+			feed, _ := fp.ParseURL(focusString)
+			items := feed.Items
+			rssContentsItems = []string{} // clear out the current array
+			for i := 0; i < len(items); i++ {
+				rssContentsItems = append(rssContentsItems, items[i].Title)
+				tempStack := make(map[string]string)
+				tempStack["Description"] = items[i].Description
+				tempStack["Published"] = items[i].Published
+				tempStack["Link"] = items[i].Link
+				fullStack[items[i].Title] = tempStack
 			}
-			errorPage(termWidth, termHeight, contents)
+			rssContents.List.Items = rssContentsItems
+			ui.Render(rssHeaders.List, rssContents.List)
+
+		case state["focusStack"] == 1:
+			// go to rssExtended
+			extendedItems := []string{
+				"Description : " +
+					fullStack[rssContentsItems[state["rssContentCounter"]]]["Description"],
+				"Published: " +
+					fullStack[rssContentsItems[state["rssContentCounter"]]]["Published"],
+				"Link: " +
+					fullStack[rssContentsItems[state["rssContentCounter"]]]["Link"],
+			}
+			rssContentExtended := makeListWidget(extendedItems, "Content Extended",
+				*termWidth, *termHeight, 0, 0, "default")
+			ui.Render(rssContentExtended.List)
+			state["focusStack"] = 2
 		}
-
 	})
-
-	ui.Handle("o", func(ui.Event) {
-
-		// mainly will only work
-		// when the focus is on rssContent
-		if focusStack == 1 {
-			// get where the current focus is on
-
-			focusString := getCurrentFocus(rssContentItems, rssContentCounter)
-
-			link := fullStack[focusString]["Link"]
-
-			openInBrowser(link)
-
-			ui.Clear()
-			ui.Render(addRssHeader, rssNames, rssContent)
-		}
-
-	})
-
-	// TODO : set this to cancel out rssContentExtended
 	ui.Handle("<Escape>", func(ui.Event) {
-		// if the focus is currently on the rssContentExtended page
-		if focusStack == 2 {
+		rssHeaders := makeListWidget(rssHeadersItems, "Feed", *termWidth/2, *termHeight, 0, 0, "Magenta")
+		rssContents := makeListWidget(rssContentsItems, "Content", *termWidth/2, *termHeight, *termWidth/2, 0, "White")
+		switch {
+		case state["focusStack"] == 2: // rssContentExtended
 			ui.Clear()
-			ui.Render(addRssHeader, rssNames, rssContent)
-			// push it back to nothing
-			focusStack = 1
-		} else if focusStack == 3 {
+			ui.Render(rssHeaders.List, rssContents.List)
+			state["focusStack"] = 1
+		case state["focusStack"] == 3: // help page
 			ui.Clear()
-			ui.Render(addRssHeader, rssNames, rssContent)
-			// set it back to default
-			focusStack = 1
+			ui.Render(rssHeaders.List, rssContents.List)
+			state["focusStack"] = 0
+		default: // dont do anything
 		}
-	})
-
-	ui.Handle("j", func(ui.Event) {
-
-		// TODO : make this into a function
-		stackClone := []string{}
-
-		if focusStack == 0 {
-			// use the rssNames stack
-			stackClone = append(stackClone, rssNamesItems...)
-			switch {
-			case rssNamesCounter == len(stackClone)-1:
-			default:
-				rssNamesCounter++
-			}
-
-			stackClone[rssNamesCounter] = "[" +
-				stackClone[rssNamesCounter] + "]" +
-				"(fg-red,bg-green)"
-		} else {
-			// use the rssContent stack
-			stackClone = append(stackClone, rssContentItems...)
-			switch {
-			case rssContentCounter == len(stackClone)-1:
-			default:
-				rssContentCounter++
-			}
-			stackClone[rssContentCounter] = "[" +
-				stackClone[rssContentCounter] + "]" +
-				"(fg-red,bg-green)"
-		}
-
-		// TODO : convert this into a regex function
-		// add the syntax highlighting format
-
-		// reset the Items with the new highlighting
-		if focusStack == 0 {
-			rssNames.Items = stackClone
-		} else {
-			rssContent.Items = stackClone
-		}
-
-		// re-render the background
-		ui.Render(addRssHeader, rssNames, rssContent)
 
 	})
+	ui.Handle("<Resize>", func(e ui.Event) {
+		*termWidth = ui.TermWidth()
+		*termHeight = ui.TermHeight()
 
-	ui.Handle("k", func(ui.Event) {
+		rssHeaders := makeListWidget(rssHeadersItems, "Feed", *termWidth/2, *termHeight, 0, 0, "Magenta")
+		rssContents := makeListWidget(rssContentsItems, "Content", *termWidth/2, *termHeight, *termWidth/2, 0, "White")
 
-		// TODO : make this into a function
-		stackClone := []string{}
-
-		if focusStack == 0 {
-			// use the rssNames stack
-			stackClone = append(stackClone, rssNamesItems...)
-			switch {
-			case rssNamesCounter < 1:
-			default:
-				rssNamesCounter--
-			}
-
-			stackClone[rssNamesCounter] = "[" +
-				stackClone[rssNamesCounter] + "]" +
-				"(fg-red,bg-green)"
-		} else {
-			// use the rssContent stack
-			stackClone = append(stackClone, rssContentItems...)
-			switch {
-			case rssContentCounter < 1:
-			default:
-				rssContentCounter--
-			}
-			stackClone[rssContentCounter] = "[" +
-				stackClone[rssContentCounter] + "]" +
-				"(fg-red,bg-green)"
-		}
-
-		// TODO : convert this into a regex function
-		// add the syntax highlighting format
-
-		// reset the Items with the new highlighting
-		if focusStack == 0 {
-			rssNames.Items = stackClone
-		} else {
-			rssContent.Items = stackClone
-		}
-
-		// re-render the background
-		ui.Render(addRssHeader, rssNames, rssContent)
+		ui.Render(rssHeaders.List, rssContents.List)
 
 	})
-
-	ui.Handle("H", func(ui.Event) {
-		ui.Clear()
-		ui.Render(helpPage)
-		focusStack = 3
-	})
-
-	ui.Handle("<Tab>", func(ui.Event) {
-
-		// 0 == rssNames
-		// 1 == rssContent
-		if focusStack == 0 {
-			focusStack = 1
-			rssNames.BorderFg = ui.ColorDefault
-			rssContent.BorderFg = ui.ColorMagenta
-			ui.Clear()
-			ui.Render(addRssHeader, rssNames, rssContent)
-		} else if focusStack == 1 {
-			// switch it back to 0
-			focusStack = 0
-			rssNames.BorderFg = ui.ColorMagenta
-			rssContent.BorderFg = ui.ColorDefault
-			ui.Clear()
-			ui.Render(addRssHeader, rssNames, rssContent)
-		} else {
-			focusStack = 0
-			ui.Clear()
-			ui.Render(addRssHeader, rssNames, rssContent)
-		}
-	})
-
 	ui.Loop()
 }
