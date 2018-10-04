@@ -3,6 +3,8 @@
 ## How it looks
 ![Preview](preview.gif)
 
+#### Adapts to terminal resizing
+
 ## Configuration - example
 Name it config.json and put it in the same directory
 ```
