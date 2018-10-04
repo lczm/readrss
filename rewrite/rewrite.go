@@ -43,7 +43,7 @@ func getTermSize() (int, int) {
 	return width, height
 }
 
-func makeListWidget(content []string, width int, height int,
+func makeListWidget(content []string, label string, width int, height int,
 	x int, y int, colour string) *widgetMaker {
 
 	widgetList := ui.NewList()
@@ -55,6 +55,8 @@ func makeListWidget(content []string, width int, height int,
 
 	widgetList.X = x // x location
 	widgetList.Y = y // y location
+
+	widgetList.BorderLabel = label
 
 	// TODO : tidy this up
 
@@ -158,9 +160,9 @@ func main() {
 	rssHeadersItems := getConfig()
 	rssContentsItems := []string{}
 
-	rssHeaders := makeListWidget(rssHeadersItems, termWidth/2,
+	rssHeaders := makeListWidget(rssHeadersItems, "Feed", termWidth/2,
 		termHeight, 0, 0, "Magenta").List
-	rssContents := makeListWidget(rssContentsItems, termWidth/2,
+	rssContents := makeListWidget(rssContentsItems, "Content", termWidth/2,
 		termHeight, termWidth/2, 0, "White").List
 
 	ui.Render(rssHeaders, rssContents)
@@ -284,7 +286,7 @@ func main() {
 			"Esc : Escape out of current mode",
 			"Press Esc to get out of this screen",
 		}
-		helpPage := makeListWidget(helpPageContent, termWidth, termHeight, 0, 0, "")
+		helpPage := makeListWidget(helpPageContent, "Help", termWidth, termHeight, 0, 0, "")
 		ui.Render(helpPage.List)
 		state["focusStack"] = 3 // set focusStack to 3
 	})
@@ -343,7 +345,7 @@ func main() {
 				"Link: " +
 					fullStack[rssContentsItems[state["rssContentCounter"]]]["Link"],
 			}
-			rssContentExtended := makeListWidget(extendedItems,
+			rssContentExtended := makeListWidget(extendedItems, "Content Extended",
 				termWidth, termHeight, 0, 0, "default")
 			ui.Render(rssContentExtended.List)
 			state["focusStack"] = 2
