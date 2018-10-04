@@ -220,6 +220,7 @@ func main() {
 		rssHeaders := makeListWidget(rssHeadersItems, "Feed", *termWidth/2, *termHeight, 0, 0, "Magenta")
 		rssContents := makeListWidget(rssContentsItems, "Content", *termWidth/2, *termHeight, *termWidth/2, 0, "White")
 
+	higherSwitchJ:
 		switch {
 		case state["focusStack"] == 0:
 			switch {
@@ -235,6 +236,8 @@ func main() {
 			ui.Render(rssHeaders.List, rssContents.List)
 		case state["focusStack"] == 1:
 			switch {
+			case len(rssContents.List.Items) == 0:
+				break higherSwitchJ
 			case state["rssContentCounter"] < 0:
 				state["rssContentCounter"] = 0
 			case state["rssContentCounter"] >= len(rssContentsItems)-1:
@@ -255,6 +258,7 @@ func main() {
 		rssHeaders := makeListWidget(rssHeadersItems, "Feed", *termWidth/2, *termHeight, 0, 0, "Magenta")
 		rssContents := makeListWidget(rssContentsItems, "Content", *termWidth/2, *termHeight, *termWidth/2, 0, "White")
 
+	higherSwitchK:
 		switch {
 		case state["focusStack"] == 0:
 			switch {
@@ -269,7 +273,11 @@ func main() {
 			ui.Render(rssHeaders.List, rssContents.List)
 		case state["focusStack"] == 1:
 			switch {
+			case len(rssContents.List.Items) == 0:
+				break higherSwitchK
 			case state["rssContentCounter"] < 1:
+			case len(rssContentsItems) < 1:
+				break
 			default:
 				state["rssContentCounter"]--
 			}
@@ -325,6 +333,8 @@ func main() {
 	})
 
 	ui.Handle("<Enter>", func(ui.Event) {
+		rssHeaders := makeListWidget(rssHeadersItems, "Feed", *termWidth/2, *termHeight, 0, 0, "Magenta")
+		rssContents := makeListWidget(rssContentsItems, "Content", *termWidth/2, *termHeight, *termWidth/2, 0, "White")
 		switch {
 		case state["focusStack"] == 0:
 			if len(rssHeadersItems) < 1 {
