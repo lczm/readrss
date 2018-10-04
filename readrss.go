@@ -308,6 +308,8 @@ func main() {
 		state["focusStack"] = 3 // set focusStack to 3
 	})
 	ui.Handle("<Tab>", func(ui.Event) {
+		rssHeaders := makeListWidget(rssHeadersItems, "Feed", *termWidth/2, *termHeight, 0, 0, "Magenta")
+		rssContents := makeListWidget(rssContentsItems, "Content", *termWidth/2, *termHeight, *termWidth/2, 0, "White")
 		switch {
 		case state["focusStack"] == 0:
 			state["focusStack"] = 1
