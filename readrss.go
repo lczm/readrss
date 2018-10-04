@@ -141,6 +141,16 @@ func changeWidthHeight(widget *widgetMaker, width int, height int) {
 	widget.List.Height = height
 }
 
+func getBorderColour(focus int) (string, string) {
+	if focus == 0 {
+		return "Magenta", "White"
+	} else if focus == 1 {
+		return "White", "Magenta"
+	} else {
+		return "Magenta", "White"
+	}
+}
+
 func main() {
 	err := ui.Init()
 	if err != nil {
@@ -215,10 +225,23 @@ func main() {
 
 	ui.Handle("q", func(ui.Event) { ui.StopLoop() })
 	ui.Handle("j", func(ui.Event) { // go down in terms of focus
-		stackClone := []string{}
 
-		rssHeaders := makeListWidget(rssHeadersItems, "Feed", *termWidth/2, *termHeight, 0, 0, "Magenta")
-		rssContents := makeListWidget(rssContentsItems, "Content", *termWidth/2, *termHeight, *termWidth/2, 0, "White")
+		// headersBorder := ""
+		// contentsBorder := ""
+		// switch state["focusStack"] {
+		// case 0:
+		// 	headersBorder = "Magenta"
+		// 	contentsBorder = "White"
+		// case 1:
+		// 	headersBorder = "White"
+		// 	contentsBorder = "Magenta"
+		// }
+
+		headersBorder, contentsBorder := getBorderColour(state["focusStack"])
+
+		stackClone := []string{}
+		rssHeaders := makeListWidget(rssHeadersItems, "Feed", *termWidth/2, *termHeight, 0, 0, headersBorder)
+		rssContents := makeListWidget(rssContentsItems, "Content", *termWidth/2, *termHeight, *termWidth/2, 0, contentsBorder)
 
 	higherSwitchJ:
 		switch {
@@ -253,10 +276,24 @@ func main() {
 
 	})
 	ui.Handle("k", func(ui.Event) { // go up in terms of focus
+
+		// headersBorder := ""
+		// contentsBorder := ""
+		// switch state["focusStack"] {
+		// case 0:
+		// 	headersBorder = "Magenta"
+		// 	contentsBorder = "White"
+		// case 1:
+		// 	headersBorder = "White"
+		// 	contentsBorder = "Magenta"
+		// }
+
+		headersBorder, contentsBorder := getBorderColour(state["focusStack"])
+
 		stackClone := []string{}
 
-		rssHeaders := makeListWidget(rssHeadersItems, "Feed", *termWidth/2, *termHeight, 0, 0, "Magenta")
-		rssContents := makeListWidget(rssContentsItems, "Content", *termWidth/2, *termHeight, *termWidth/2, 0, "White")
+		rssHeaders := makeListWidget(rssHeadersItems, "Feed", *termWidth/2, *termHeight, 0, 0, headersBorder)
+		rssContents := makeListWidget(rssContentsItems, "Content", *termWidth/2, *termHeight, *termWidth/2, 0, contentsBorder)
 
 	higherSwitchK:
 		switch {
@@ -316,20 +353,22 @@ func main() {
 		state["focusStack"] = 3 // set focusStack to 3
 	})
 	ui.Handle("<Tab>", func(ui.Event) {
-		rssHeaders := makeListWidget(rssHeadersItems, "Feed", *termWidth/2, *termHeight, 0, 0, "Magenta")
-		rssContents := makeListWidget(rssContentsItems, "Content", *termWidth/2, *termHeight, *termWidth/2, 0, "White")
-		switch {
-		case state["focusStack"] == 0:
-			state["focusStack"] = 1
-			rssHeaders.List.BorderFg = ui.ColorWhite
-			rssContents.List.BorderFg = ui.ColorMagenta
-			ui.Render(rssHeaders.List, rssContents.List)
-		case state["focusStack"] == 1:
-			state["focusStack"] = 0
-			rssHeaders.List.BorderFg = ui.ColorMagenta
-			rssContents.List.BorderFg = ui.ColorWhite
-			ui.Render(rssHeaders.List, rssContents.List)
+		headersBorder := ""
+		contentsBorder := ""
+		switch state["focusStack"] {
+		case 0:
+			state["focusStack"] = 1 // sets it to 1
+			headersBorder = "White"
+			contentsBorder = "Magenta"
+		case 1:
+			state["focusStack"] = 0 // sets it to 0
+			headersBorder = "Magenta"
+			contentsBorder = "White"
 		}
+
+		rssHeaders = makeListWidget(rssHeadersItems, "Feed", *termWidth/2, *termHeight, 0, 0, headersBorder)
+		rssContents = makeListWidget(rssContentsItems, "Content", *termWidth/2, *termHeight, *termWidth/2, 0, contentsBorder)
+		ui.Render(rssHeaders.List, rssContents.List)
 	})
 
 	ui.Handle("<Enter>", func(ui.Event) {
@@ -369,10 +408,14 @@ func main() {
 				tempStack["Description"] = items[i].Description
 				tempStack["Published"] = items[i].Published
 				tempStack["Link"] = items[i].Link
+				tempStack["Content"] = items[i].Content
 				fullStack[items[i].Title] = tempStack
 			}
 			rssContents.List.Items = rssContentsItems
 			ui.Render(rssHeaders.List, rssContents.List)
+			// set the content counter to 0 to avoid going from a
+			// larger number to a smaller one
+			state["rssContentCounter"] = 0
 
 		case state["focusStack"] == 1:
 			if len(rssContents.List.Items) < 1 {
@@ -386,6 +429,8 @@ func main() {
 					fullStack[rssContentsItems[state["rssContentCounter"]]]["Published"],
 				"Link: " +
 					fullStack[rssContentsItems[state["rssContentCounter"]]]["Link"],
+				"Content + " +
+					fullStack[rssContentsItems[state["rssContentCounter"]]]["Content"],
 			}
 			rssContentExtended := makeListWidget(extendedItems, "Content Extended",
 				*termWidth, *termHeight, 0, 0, "default")
@@ -394,17 +439,42 @@ func main() {
 		}
 	})
 	ui.Handle("<Escape>", func(ui.Event) {
-		rssHeaders := makeListWidget(rssHeadersItems, "Feed", *termWidth/2, *termHeight, 0, 0, "Magenta")
-		rssContents := makeListWidget(rssContentsItems, "Content", *termWidth/2, *termHeight, *termWidth/2, 0, "White")
+
 		switch {
 		case state["focusStack"] == 2: // rssContentExtended
 			ui.Clear()
-			ui.Render(rssHeaders.List, rssContents.List)
 			state["focusStack"] = 1
+			headersBorder := ""
+			contentsBorder := ""
+			switch state["focusStack"] {
+			case 0:
+				headersBorder = "Magenta"
+				contentsBorder = "White"
+			case 1:
+				headersBorder = "White"
+				contentsBorder = "Magenta"
+			}
+
+			rssHeaders := makeListWidget(rssHeadersItems, "Feed", *termWidth/2, *termHeight, 0, 0, headersBorder)
+			rssContents := makeListWidget(rssContentsItems, "Content", *termWidth/2, *termHeight, *termWidth/2, 0, contentsBorder)
+			ui.Render(rssHeaders.List, rssContents.List)
 		case state["focusStack"] == 3: // help page
 			ui.Clear()
-			ui.Render(rssHeaders.List, rssContents.List)
 			state["focusStack"] = 0
+			headersBorder := ""
+			contentsBorder := ""
+			switch state["focusStack"] {
+			case 0:
+				headersBorder = "Magenta"
+				contentsBorder = "White"
+			case 1:
+				headersBorder = "White"
+				contentsBorder = "Magenta"
+			}
+
+			rssHeaders := makeListWidget(rssHeadersItems, "Feed", *termWidth/2, *termHeight, 0, 0, headersBorder)
+			rssContents := makeListWidget(rssContentsItems, "Content", *termWidth/2, *termHeight, *termWidth/2, 0, contentsBorder)
+			ui.Render(rssHeaders.List, rssContents.List)
 		default: // dont do anything
 		}
 
@@ -413,8 +483,20 @@ func main() {
 		*termWidth = ui.TermWidth()
 		*termHeight = ui.TermHeight()
 
-		rssHeaders := makeListWidget(rssHeadersItems, "Feed", *termWidth/2, *termHeight, 0, 0, "Magenta")
-		rssContents := makeListWidget(rssContentsItems, "Content", *termWidth/2, *termHeight, *termWidth/2, 0, "White")
+		// headersBorder := ""
+		// contentsBorder := ""
+		// switch state["focusStack"] {
+		// case 0:
+		// 	headersBorder = "Magenta"
+		// 	contentsBorder = "White"
+		// case 1:
+		// 	headersBorder = "White"
+		// 	contentsBorder = "Magenta"
+		// }
+
+		headersBorder, contentsBorder := getBorderColour(state["focusStack"])
+		rssHeaders := makeListWidget(rssHeadersItems, "Feed", *termWidth/2, *termHeight, 0, 0, headersBorder)
+		rssContents := makeListWidget(rssContentsItems, "Content", *termWidth/2, *termHeight, *termWidth/2, 0, contentsBorder)
 
 		ui.Render(rssHeaders.List, rssContents.List)
 
