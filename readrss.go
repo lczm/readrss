@@ -375,6 +375,9 @@ func main() {
 			ui.Render(rssHeaders.List, rssContents.List)
 
 		case state["focusStack"] == 1:
+			if len(rssContents.List.Items) < 1 {
+				break
+			}
 			// go to rssExtended
 			extendedItems := []string{
 				"Description : " +
