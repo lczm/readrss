@@ -174,7 +174,17 @@ func main() {
 	termHeight := &originalHeight
 
 	// contents of config file
-	rssHeadersItems := getConfig()
+	configItems := getConfig()
+
+	rssHeadersItems := []string{
+		"All",
+	}
+	if len(configItems) > 0 {
+		for i := 0; i < len(configItems); i++ {
+			rssHeadersItems = append(rssHeadersItems, configItems[i])
+		}
+	}
+
 	rssContentsItems := []string{}
 
 	// rssHeaders := makeListWidget(rssHeadersItems, "Feed", termWidth/2,
@@ -381,7 +391,7 @@ func main() {
 		rssContents := makeListWidget(rssContentsItems, "Content", *termWidth/2, *termHeight, *termWidth/2, 0, "White")
 		switch {
 		case state["focusStack"] == 0:
-			if len(rssHeadersItems) < 1 {
+			if len(rssHeadersItems) < 2 {
 				errorPage := makeParWidget(
 					"There is currently no links",
 					40, 3, *termWidth/2-(40/2), *termHeight, "",
@@ -392,7 +402,35 @@ func main() {
 				ui.Render(rssHeaders.List, rssContents.List)
 				break
 			}
+
 			focusString := rssHeadersItems[state["rssHeaderCounter"]]
+
+			if focusString == "All" {
+				// get all the links in an array
+				urlArray := []string{}
+				urlArray = append(urlArray, rssHeadersItems...)
+				urlArray = urlArray[1:]
+
+				for i := 0; i < len(urlArray); i++ {
+					fp := gofeed.NewParser()
+					feed, _ := fp.ParseURL(urlArray[i])
+					items := feed.Items
+					for i := 0; i < len(items); i++ {
+						rssContentsItems = append(rssContentsItems, items[i].Title)
+						tempStack := make(map[string]string)
+						tempStack["Description"] = items[i].Description
+						tempStack["Published"] = items[i].Published
+						tempStack["Link"] = items[i].Link
+						tempStack["Content"] = items[i].Content
+						fullStack[items[i].Title] = tempStack
+					}
+				}
+				rssContents.List.Items = rssContentsItems
+				ui.Render(rssHeaders.List, rssContents.List)
+				state["rssContentCounter"] = 0
+				return
+			}
+
 			// check if http is contained in side the string
 			if strings.Contains(focusString, "http") == false {
 				notValid := makeParWidget("Not a valid rss link",
@@ -403,6 +441,7 @@ func main() {
 				ui.Render(rssHeaders.List, rssContents.List)
 				break
 			}
+
 			fp := gofeed.NewParser()
 			feed, _ := fp.ParseURL(focusString)
 			items := feed.Items
