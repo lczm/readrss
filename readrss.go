@@ -247,6 +247,8 @@ func main() {
 		switch {
 		case state["focusStack"] == 0:
 			switch {
+			case len(rssHeaders.List.Items) == 0:
+				break higherSwitchJ
 			case state["rssHeaderCounter"] < 0:
 				state["rssHeaderCounter"] = 0
 			case state["rssHeaderCounter"] >= len(rssHeadersItems)-1:
@@ -299,6 +301,8 @@ func main() {
 		switch {
 		case state["focusStack"] == 0:
 			switch {
+			case len(rssContents.List.Items) == 0:
+				break higherSwitchK
 			case state["rssHeaderCounter"] < 1:
 				state["rssHeaderCounter"] = 0
 			default:
@@ -364,6 +368,7 @@ func main() {
 			state["focusStack"] = 0 // sets it to 0
 			headersBorder = "Magenta"
 			contentsBorder = "White"
+		default:
 		}
 
 		rssHeaders = makeListWidget(rssHeadersItems, "Feed", *termWidth/2, *termHeight, 0, 0, headersBorder)
@@ -482,17 +487,6 @@ func main() {
 	ui.Handle("<Resize>", func(e ui.Event) {
 		*termWidth = ui.TermWidth()
 		*termHeight = ui.TermHeight()
-
-		// headersBorder := ""
-		// contentsBorder := ""
-		// switch state["focusStack"] {
-		// case 0:
-		// 	headersBorder = "Magenta"
-		// 	contentsBorder = "White"
-		// case 1:
-		// 	headersBorder = "White"
-		// 	contentsBorder = "Magenta"
-		// }
 
 		headersBorder, contentsBorder := getBorderColour(state["focusStack"])
 		rssHeaders := makeListWidget(rssHeadersItems, "Feed", *termWidth/2, *termHeight, 0, 0, headersBorder)
